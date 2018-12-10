@@ -42,7 +42,8 @@ fi
 
 if [ -f TEMPLATE.rb ]; then
   cat TEMPLATE.rb input$day > $daypad.rb
+  rm input$day
 elif [ -f t.rb ]; then
   cat t.rb input$day > $daypad.rb
+  rm input$day
 fi
-
