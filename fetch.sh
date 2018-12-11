@@ -47,3 +47,5 @@ elif [ -f t.rb ]; then
   cat t.rb input$day > $daypad.rb
   rm input$day
 fi
+
+chmod +x $daypad.rb
