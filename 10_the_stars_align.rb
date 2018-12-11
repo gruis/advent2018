@@ -4,71 +4,85 @@ VERBOSE = ARGV.delete('-v')
 SKIP = ARGV.delete('-s')
 
 def plot(data)
-  minx, maxx = data.map(&:first).minmax
-  miny, maxy = data.map(&:last).minmax
-  #puts "width: #{maxx - minx}"
-  #puts "height: #{maxy - miny}"
+  minx,maxx = data.map(&:first).minmax
+  miny,maxy = data.map(&:last).minmax
 
-  grid = Array.new(maxx + 2) { Array.new(maxy + 2, ".") }
-  data.each { |x,y| grid[x][y] = "#" }
-  grid
+  height, width = dimensions(data)
+  puts "#{width}:#{height} - #{maxx}:#{minx}; "\
+       "#{maxy}:#{miny}; #{maxx - minx}:#{maxy - miny}"
+
+  grid = Array.new(width + 1) { Array.new(height + 1, ".") }
+
+  data.each { |x,y| grid[x - minx][y - miny] = "#" }
+  draw(grid)
 end
 
 def draw(grid)
-  #File.open("the_stars_align.txt", "w") do |io|
-    xmax = grid.length
-    ymax = grid[0].length
+  xmax = grid.length
+  ymax = grid[0].length
 
-    ymax.times do |y|
-      xmax.times { |x| print grid[x][y] }
-      print "\n"
-    end
-  #end
-
+  ymax.times do |y|
+    xmax.times { |x| print grid[x][y] }
+    print "\n"
+  end
 end
 
-def gnuplot(points, name, xrange, yrange)
-  path = "10/#{name}"
-  data = points.map { |x,y|  "#{x} #{y}" }.join("\n")
-  File.open("#{path}.dat", "w") do |io|
-      io.write "#{data}"
-  end
+def draw(grid)
+  xmax = grid.length
+  ymax = grid[0].length
 
-  width = xrange[1] - xrange[0]
-  height = yrange[1] - yrange[0]
-  commands = %Q(
-    set terminal png size #{width},#{height}
-    set output "#{path}.png"
-    plot [#{xrange[0]}:#{xrange[1]}] [#{yrange[0]}:#{yrange[1]}] "#{path}.dat"
-  )
-  IO.popen("gnuplot", "w") { |io| io.puts commands }
-  File.delete("#{path}.dat")
+  ymax.times do |y|
+    xmax.times { |x| print grid[x][y] }
+    print "\n"
+  end
+end
+
+def drift(positions, velocities)
+  positions.each_index do |i|
+    positions[i][0] = positions[i][0] + velocities[i][0]
+    positions[i][1] = positions[i][1] + velocities[i][1]
+  end
+  positions
+end
+
+def undrift(positions, velocities)
+  positions.each_index do |i|
+    positions[i][0] = positions[i][0] - velocities[i][0]
+    positions[i][1] = positions[i][1] - velocities[i][1]
+  end
+  positions
+end
+
+def dimensions(positions)
+  minx,maxx = positions.map(&:first).minmax
+  miny,maxy = positions.map(&:last).minmax
+  height  = maxy - miny
+  width   = maxx - minx
+  [height, width]
 end
 
 def part1(data)
   poss = data.map { |d|  [ d[0], d[1] ] }
   vels = data.map { |d|  [ d[2], d[3] ] }
 
-  minx,maxx = poss.map(&:first).minmax
-  miny,maxy = poss.map(&:last).minmax
-  height = maxy - miny
-  width = maxx - minx
+  last_height, last_width = 1.0 / 0.0, 1.0 / 0.0
 
-  puts "#{minx}:#{maxx} #{miny}:#{maxy}"
-  puts "#{width}x#{height}"
+  step = 0
+  while true
+    step += 1
+    poss = drift(poss, vels)
+    height, width = dimensions(poss)
+    print "\r#{step} (#{last_width}:#{width} #{last_height}:#{height})#{" " * 20}"
 
-  10.times do |i|
-    gnuplot(poss, i, [minx, maxx], [miny, maxy])
-    #draw(plot(poss))
-    poss.each_index do |i|
-      poss[i][0] = poss[i][0] + vels[i][0]
-      poss[i][1] = poss[i][1] + vels[i][1]
+    if height > last_height
+      print "\n"
+      plot(undrift(poss, vels))
+      puts "-#{step - 1}-"
+      break
     end
-    #sleep 1
+    last_height = height
+    last_width  = width
   end
-end
-
-def part2(data)
 end
 
 
@@ -80,7 +94,6 @@ input.each_index do |i|
     cords = line.scan(/position=<\s*(-?\d+),\s*(-?\d+)> velocity=<\s*(-?\d+),\s*(-?\d+)>/)[0].map(&:to_i)
   end
   part1(data.clone)
-  part2(data.clone)
 end
 
 __END__
