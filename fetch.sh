@@ -23,6 +23,7 @@ else
 fi
 
 daypad=$(seq -f %02g $day $day)
+daypad="${daypad}_$1"
 
 if [ "$yes" = "1" ]; then
   if [ -f input$day ]; then
